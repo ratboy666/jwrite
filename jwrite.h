@@ -57,8 +57,13 @@
  * Modified for Kernel, Fred Weigel 2023
  */
 
+/* If in ZFS <sys/zfs_context.h> provides what is needed */
+
+/* If standalone */
 #include <stdbool.h>
 #define boolean_t bool
+#define B_TRUE true
+#define B_FALSE false
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -151,13 +156,13 @@ int jwErrorPos(jwc_t *jwc);
 /* Object insertion functions
  * - used to insert "key":"value" pairs into an object
  */
-void jwObj_string(jwc_t *jwc, char *key, char *value);
-void jwObj_int(jwc_t *jwc, char *key, int64_t value);
-void jwObj_double(jwc_t *jwc, char *key, double value);
-void jwObj_bool(jwc_t *jwc, char *key, boolean_t value);
-void jwObj_null(jwc_t *jwc, char *key);
-void jwObj_object(jwc_t *jwc, char *key);
-void jwObj_array(jwc_t *jwc, char *key);
+void jwObj_string(jwc_t *jwc, const char *key, char *value);
+void jwObj_int(jwc_t *jwc, const char *key, int64_t value);
+void jwObj_double(jwc_t *jwc, const char *key, double value);
+void jwObj_bool(jwc_t *jwc, const char *key, boolean_t value);
+void jwObj_null(jwc_t *jwc, const char *key);
+void jwObj_object(jwc_t *jwc, const char *key);
+void jwObj_array(jwc_t *jwc, const char *key);
 
 /* Array insertion functions
  * - used to insert "value" elements into an array
@@ -179,7 +184,7 @@ int jwEnd(jwc_t *jwc);
  * i.e. enclosing quotes are not added
  * - use if your app. supplies its own value->string functions
  */
-void jwObj_raw(jwc_t *jwc, char *key, char *rawtext);
+void jwObj_raw(jwc_t *jwc, const char *key, char *rawtext);
 void jwArr_raw(jwc_t *jwc, char *rawtext);
 
 /* end of jwrite.h */
