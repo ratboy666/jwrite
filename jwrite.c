@@ -296,6 +296,8 @@ static void jwPutch(jwc_t *jwc, char c) {
 
 /* Put string enclosed in quotes. This handles escaping the
  * contents. jwPutraw() can be used if that is not desired.
+ * Note that this supports ONLY valid utf-8 strings. It
+ * is the callers responsibility to produce such strings.
  */
 static void jwPutstr(jwc_t *jwc, char *str) {
     static char *hex = "0123456789ABCDEF";
@@ -314,9 +316,10 @@ static void jwPutstr(jwc_t *jwc, char *str) {
 	    jwPutraw(jwc, "\\t");
 	else if (c == 8)
 	    jwPutraw(jwc, "\\b");
-	/* all other characters from 0x00 to 0x1f, and 0x7f to 0xff
+	/* all characters from 0x00 to 0x1f, and 0x7f are
+	 * escaped as: \u00xx
 	 */
-	else if ((c < ' ') || (c > '~')) {
+	else if (((0 <= c) && (c <= 0x1f)) || (c == 0x7f)) {
 	    jwPutraw(jwc, "\\u00");
 	    jwPutch(jwc, hex[(c >> 4) & 0x0f]);
 	    jwPutch(jwc, hex[c & 0x0f]);
@@ -328,7 +331,12 @@ static void jwPutstr(jwc_t *jwc, char *str) {
 	    jwPutraw(jwc, "\\\\");
 	else if (c == '/')
 	    jwPutraw(jwc, "\\/");
-	/* all other printable characters ' ' to '~'
+	/* all other printable characters ' ' to '~', and
+	 * any utf-8 sequences (high bit set):
+	 * 1xxxxxxx 10xxxxxx ...
+	 * is a utf-8 sequence (10xxxxxx may occur 1 to 3 times).
+	 * Note that this is simply distinguished here as high
+	 * bit set.
 	 */
 	else
             jwPutch(jwc, c);
