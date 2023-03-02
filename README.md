@@ -24,6 +24,6 @@ may vary.
 
 Style has been altered (slightly) to match my preferred style.
 
-gcc main.c jwrite.c
+gcc main.c jwrite.c -lm
 
 to generate a.out, which illustrates the tektonics.
