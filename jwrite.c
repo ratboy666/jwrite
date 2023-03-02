@@ -351,7 +351,7 @@ static void jwPutraw(jwc_t *jwc, char *str) {
  * - adds comma if reqd
  * - adds "key" :
  */
-int _jwObj(jwc_t *jwc, char *key) {
+static int _jwObj(jwc_t *jwc, char *key) {
     if (jwc->error == JWRITE_OK) {
         ++jwc->callNo;
     if (jwc->nodeStack[jwc->stackpos].nodeType != JW_OBJECT)
@@ -373,7 +373,7 @@ int _jwObj(jwc_t *jwc, char *key) {
  * - checks current node is ARRAY
  * - adds comma if reqd
  */
-int _jwArr(jwc_t *jwc) {
+static int _jwArr(jwc_t *jwc) {
     if (jwc->error == JWRITE_OK) {
         ++jwc->callNo;
 	if (jwc->nodeStack[jwc->stackpos].nodeType != JW_ARRAY)
