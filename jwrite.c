@@ -305,15 +305,15 @@ static void jwPutstr(jwc_t *jwc, char *str) {
 	/* formfeed, newline, return, tab, backspace
 	 */
 	if (c == 12)
-	    jwPutraw(jwc, "\f");
+	    jwPutraw(jwc, "\\f");
 	else if (c == 10)
-	    jwPutraw(jwc, "\n");
+	    jwPutraw(jwc, "\\n");
 	else if (c == 13)
-	    jwPutraw(jwc, "\r");
+	    jwPutraw(jwc, "\\r");
 	else if (c == 9)
-	    jwPutraw(jwc, "\t");
+	    jwPutraw(jwc, "\\t");
 	else if (c == 8)
-	    jwPutraw(jwc, "\b");
+	    jwPutraw(jwc, "\\b");
 	/* all other characters from 0x00 to 0x1f, and 0x7f to 0xff
 	 */
 	else if ((c < ' ') || (c > '~')) {

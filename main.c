@@ -19,7 +19,7 @@ int main(int argc, char * argv[]) {
 
 
 void jWriteTest(void) {
-    char buffer[1024];
+    char buffer[2048];
     size_t buflen = sizeof buffer;
     int err;
     jwc_t jwc;
@@ -105,6 +105,12 @@ void jWriteTest(void) {
     jwArr_double(&jwc, -2.22507e-308);
     jwArr_double(&jwc, 1.79769e308);
     jwArr_double(&jwc, -1.79769e308);
+
+    char s[256];
+    for (int i = 1; i < 256; ++i)
+        s[i - 1] = i;
+    s[256] = '\0';
+    jwArr_string(&jwc, s);
 
     err = jwClose(&jwc);
 
