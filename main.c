@@ -24,9 +24,9 @@ void jWriteTest(void) {
     int err;
     jwc_t jwc;
 
-    printf("jwrite - JSON writer test case:\n\n" );
+    printf("jwrite - JSON writer test case:\n\n");
 
-    printf("A JSON object example:\n\n" );
+    printf("A JSON object example:\n\n");
     jwOpen(&jwc, buffer, buflen, JW_OBJECT, true);
 
     jwObj_string(&jwc, "key", "value");
@@ -64,18 +64,19 @@ void jWriteTest(void) {
 
     err = jwClose(&jwc);
 
-    printf(buffer);
+    puts(buffer);
     if (err != JWRITE_OK)
-	printf( "\nError: %s at function call %d\n", jwErrorToString(err),
-	                                             jwErrorPos(&jwc));
+	printf("\nError: %s at function call %d\n", jwErrorToString(err),
+	                                            jwErrorPos(&jwc));
 
-    printf("\n\nA JSON array example:\n\n" );
+    printf("\n\nA JSON array example:\n\n");
 
     jwOpen(&jwc, buffer, buflen, JW_ARRAY, true);
     jwArr_string(&jwc, "String value");
     jwArr_int(&jwc, 1234);
     jwArr_double(&jwc, 567.89012);
     jwArr_bool(&jwc, true);
+    jwArr_bool(&jwc, false);
     jwArr_null(&jwc);
     jwArr_object(&jwc); /* empty object */
     jwEnd(&jwc);
@@ -106,15 +107,17 @@ void jWriteTest(void) {
     jwArr_double(&jwc, 1.79769e308);
     jwArr_double(&jwc, -1.79769e308);
 
+    /* We will do 2, 3, 4 byte sequence */
+    jwArr_string(&jwc, "some utf-8: µΔ㾯𖭜 :");
     char s[256];
     for (int i = 1; i < 256; ++i)
         s[i - 1] = i;
-    s[256] = '\0';
+    s[255] = '\0';
     jwArr_string(&jwc, s);
 
     err = jwClose(&jwc);
 
-    printf(buffer);
+    puts(buffer);
     if (err != JWRITE_OK)
 	printf("\nError: %s at function call %d\n", jwErrorToString(err),
 	                                            jwErrorPos(&jwc));
@@ -128,7 +131,7 @@ void jWriteTest(void) {
     jwArr_bool(&jwc, true);						// 5
     jwArr_null(&jwc);							// 6
     jwArr_object(&jwc);	/* empty object */				// 7
-    //jwEnd(&jwc);
+    //jwEnd(&jwc);  do not close object -- next array is now an error
     printf("Before error: jwError() -> %d\n", jwError(&jwc));
     jwArr_object(&jwc);	/* <-- this is where the error is */		// 8
     printf("After error: jwError() -> %d\n", jwError(&jwc));
@@ -141,10 +144,10 @@ void jWriteTest(void) {
     jwEnd(&jwc);							// 15
     err= jwClose(&jwc);							// 16
 
-    printf(buffer);
+    puts(buffer);
     if (err != JWRITE_OK)
-	printf( "\nError: %s at function call %d\n", jwErrorToString(err),
-	                                             jwErrorPos(&jwc));
+	printf("\nError: %s at function call %d\n", jwErrorToString(err),
+	                                            jwErrorPos(&jwc));
 
     return;
 }

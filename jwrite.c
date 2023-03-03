@@ -78,7 +78,7 @@ jwEnd(jwc_t *jwc)
 {
 	if (jwc->error == JWRITE_OK) {
 		enum jwNodeType node;
-		int lastElemNo= jwc->nodeStack[jwc->stackpos].elementNo;
+		int lastElemNo = jwc->nodeStack[jwc->stackpos].elementNo;
 		node = jwPop(jwc);
 		if (lastElemNo > 0)
 		    jwPretty(jwc);
