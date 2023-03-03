@@ -118,7 +118,7 @@ typedef struct jWriteControl {
 /* Returns '\0'-terminated string describing the error (as returned by
  * jwClose())
  */
-char *jwErrorToString(int err);
+const char *jwErrorToString(int err);
 
 /* Return error "up to now" in the building of the json. This is the
  * return that jwEnd() and jwClose() return... but gives the error

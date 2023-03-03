@@ -126,9 +126,9 @@ void
 jwObj_int(jwc_t *jwc, const char *key, int64_t value)
 {
 	int n;
-	n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%lld", value);
+	n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%lld", (long long int)value);
 	if ((n >= sizeof (jwc->tmpbuf)) || (n < 0))
-		jwObj_raw(jwc, key, "####");
+		jwObj_raw(jwc, key, (char *)"####");
 	else
 		jwObj_raw(jwc, key, jwc->tmpbuf);
 }
@@ -139,9 +139,8 @@ jwObj_double(jwc_t *jwc, const char *key, double value)
 {
     int n;
     n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%g", value);
-    jwObj_raw(jwc, key, jwc->tmpbuf);
     if ((n >= sizeof (jwc->tmpbuf)) || (n < 0))
-	jwObj_raw(jwc, key, "####");
+	jwObj_raw(jwc, key, (char *)"####");
     else
 	jwObj_raw(jwc, key, jwc->tmpbuf);
 }
@@ -150,14 +149,14 @@ jwObj_double(jwc_t *jwc, const char *key, double value)
 void
 jwObj_bool(jwc_t *jwc, const char *key, boolean_t value)
 {
-	jwObj_raw(jwc, key, value ? "true" : "false");
+	jwObj_raw(jwc, key, value ? (char *)"true" : (char *)"false");
 }
 
 
 void
 jwObj_null(jwc_t *jwc, const char *key)
 {
-	jwObj_raw(jwc, key, "null");
+	jwObj_raw(jwc, key, (char *)"null");
 }
 
 
@@ -212,9 +211,9 @@ void
 jwArr_int(jwc_t *jwc, int64_t value)
 {
 	int n;
-	n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%lld", value);
+	n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%lld", (long long int)value);
 	if ((n >= sizeof (jwc->tmpbuf)) || (n < 0))
-		jwArr_raw(jwc, "####");
+		jwArr_raw(jwc, (char *)"####");
 	else
 		jwArr_raw(jwc, jwc->tmpbuf);
 }
@@ -226,7 +225,7 @@ jwArr_double(jwc_t *jwc, double value)
 	int n;
 	n = snprintf(jwc->tmpbuf, sizeof (jwc->tmpbuf), "%g", value);
 	if ((n >= sizeof (jwc->tmpbuf)) || (n < 0))
-		jwArr_raw(jwc, "####");
+		jwArr_raw(jwc, (char *)"####");
 	else
 		jwArr_raw(jwc, jwc->tmpbuf);
 }
@@ -235,14 +234,14 @@ jwArr_double(jwc_t *jwc, double value)
 void
 jwArr_bool(jwc_t *jwc, boolean_t value)
 {
-	jwArr_raw(jwc, value ? "true" : "false");
+	jwArr_raw(jwc, value ? (char *)"true" : (char *)"false");
 }
 
 
 void
 jwArr_null(jwc_t *jwc)
 {
-	jwArr_raw(jwc, "null");
+	jwArr_raw(jwc, (char *)"null");
 }
 
 
@@ -279,7 +278,7 @@ jwError(jwc_t *jwc)
 /* jwErrorToString
  * - returns string describing error code
  */
-char *
+const char *
 jwErrorToString(int err)
 {
 	switch (err) {
@@ -356,7 +355,7 @@ jwPutch(jwc_t *jwc, char c)
 static void
 jwPutstr(jwc_t *jwc, char *str)
 {
-	static char *hex = "0123456789ABCDEF";
+	static const char *hex = "0123456789ABCDEF";
 	jwPutch(jwc, '\"');
 	while (*str != '\0') {
 		int c = *str++;
