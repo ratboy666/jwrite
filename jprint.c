@@ -1,7 +1,33 @@
 /* jprint.c
  */
 
+/* If in ZFS */
+//#include <sys/zfs_context.h>
+//#include <sys/jprint.h>
+
+/* If standalone */
 #include "jprint.h"
+
+/* Here is one for the ages:
+ *
+ * Compile on Linux (Fedora 37):
+ * jprint.c:226:43: error: SSE register argument with SSE disabled
+ * 226 |                                         x = va_arg(ap, double);
+ * cc1: all warnings being treated as errors
+ *
+ * So, we replace this with an argument fetch of long. BUILD_BUG_ON
+ * is used to validate that sizeof (double) == sizeof (long)
+ *
+ * If the sizes are the same, the alignment should be aok, and we
+ * type-pun through a pointer.
+ */
+
+/* BUILD_BUG_ON(sizeof(someThing) != PAGE_SIZE);
+ */
+#ifdef BUILD_BUG_ON
+#undef BUILD_BUG_ON
+#endif
+#define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
 
 
 /* literal key length maximum
@@ -88,7 +114,7 @@ static void jp_putsq(jprint_t *jp, char *s) {
 	int c;
 
 	if (s == NULL) {
-		jp_puts(jp, "null");
+		jp_puts(jp, (char *)"null");
 		return;
 	}
 	jp_putc(jp, '\"');
@@ -97,30 +123,30 @@ static void jp_putsq(jprint_t *jp, char *s) {
                 /* formfeed, newline, return, tab, backspace
                  */
                 if (c == 12)
-                        jp_puts(jp, "\\f");
+                        jp_puts(jp, (char *)"\\f");
                 else if (c == 10)
-                        jp_puts(jp, "\\n");
+                        jp_puts(jp, (char *)"\\n");
                 else if (c == 13)
-                        jp_puts(jp, "\\r");
+                        jp_puts(jp, (char *)"\\r");
                 else if (c == 9)
-                        jp_puts(jp, "\\t");
+                        jp_puts(jp, (char *)"\\t");
                 else if (c == 8)
-                        jp_puts(jp, "\\b");
+                        jp_puts(jp, (char *)"\\b");
                /* all characters from 0x00 to 0x1f, and 0x7f are
                 * escaped as: \u00xx
                 */
                 else if (((0 <= c) && (c <= 0x1f)) || (c == 0x7f)) {
-                        jp_puts(jp, "\\u00");
+                        jp_puts(jp, (char *)"\\u00");
                         jp_putc(jp, hex[(c >> 4) & 0x0f]);
                         jp_putc(jp, hex[c & 0x0f]);
                 /* " \ /
                  */
                 } else if (c == '"')
-                        jp_puts(jp, "\\\"");
+                        jp_puts(jp, (char *)"\\\"");
                 else if (c == '\\')
-                        jp_puts(jp, "\\\\");
+                        jp_puts(jp, (char *)"\\\\");
                 else if (c == '/')
-                        jp_puts(jp, "\\/");
+                        jp_puts(jp, (char *)"\\/");
                 /* all other printable characters ' ' to '~', and
                  * any utf-8 sequences (high bit set):
                  * 1xxxxxxx 10xxxxxx ...
@@ -218,7 +244,11 @@ int_cmn:			if (jp_key(jp, key) == JPRINT_OK) {
 				break;
 			case 'g': /* next parameter is double */
 				if (jp_key(jp, key) == JPRINT_OK) {
-					x = va_arg(ap, double);
+BUILD_BUG_ON(sizeof(double) != sizeof(long));
+					long t;
+					volatile double *p = (double *)&t;
+					t = va_arg(ap, long);
+					x = *p;
 					i = snprintf(
 					    jp->tmpbuf, sizeof (jp->tmpbuf),
 				            "%g", x);
@@ -304,7 +334,9 @@ int_cmn:			if (jp_key(jp, key) == JPRINT_OK) {
 				jp->error = JPRINT_FMT;
 			++fmt;
 			/* and drop through */
+			goto deflt;
 		default:
+deflt:
 			if (k < KEYLEN) {
 				key[k++] = *fmt;
 				key[k] = '\0';
