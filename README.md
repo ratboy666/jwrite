@@ -1,4 +1,7 @@
 # jwrite
+jWrite is obsoleted by jprint, which is 
+included. No further updates will be made to jprint (due to CPOL licensing). jprint.c and jprint.h may be considered Public Domain (or MIT -- if Public Domain is not availble in your jurisdiction.)
+
 This is a library to allow simple generation of JSON. Originally
 written by TonyWilk; later published on Github: 
 

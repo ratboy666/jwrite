@@ -1,0 +1,126 @@
+jprint - Generate JSON from C
+
+Replaces jWrite completely. This was written by Fred Weigel,
+and is open for any use.
+
+https://jsonlint.com/
+
+for json validation
+
+Introduction
+
+jprint is a replacement for jWrite, and other, more complex, methods
+of generating JSON. It uses a very simple model, and uses "printf" style
+formatting to define a simple DSL (domain specific language) for JSON
+production. It does not do any allocations on its own, relying on a
+passed-in structure to track nesting. We assume that the caller is able
+to reallocate in case of insufficient buffer memory.
+
+jprint replaces jWrite; the licensing for jWrite was not compatible
+with our needs. jprint *could* generate the appropriate jWrite calls,
+and, likewise jWrite *could* generate jprint sequences as needed.
+
+However, jWrite is now considered obsolete, and not to be used.
+
+Note that jprint DOES NOT PRETTY-PRINT. Use jq (or something like that)
+to do that function (if needed). See test.c for examples of use. Unlike
+jWrite, jprint only has jp_printf to generate output. Typically, only
+three calls are needed: jp_open to initialize, jp_printf to generate
+the document and jp_close to validate and "close". jp_close itself is
+only an "error check".
+
+The idea of three calls is that jp_printf may be called many times
+to produce the desired document. This is particulary useful if an
+array is being generated.
+
+
+Type jprint_t is used to store data for jprint. This is passed to
+jprint as a pointer to jprint_t, and contains nesting, buffer and
+error information. Up to 32 object/array nesting levels (including
+top level) are supported. jp_printf supports "in-line" keys -- these
+may be up to 255 characters in length.
+
+    #include "jprint.h"
+    ...
+    jprint_t jp;
+    char buffer[2048];
+    int error;
+
+    jp_open(&jp, buffer, sizeof buffer);
+    jp_printf(&jp, "{ integer: %d, real: %g, string: %s }",
+        10, 1.5, "hello, world");
+    error = jp_close(&jp);
+
+is a simple sample of use. Note that the json document is pretty much
+created in a single call to jp_printf. Note that keys can be specified
+"in-line" as here, or with %k format. Compare the previous with:
+
+    jp_printf(&jp, "{ %k: %d, real: %g, string: %s }",
+        "integer", 10, 1.5, "hello, world");
+
+Note that keys are ignored when generating array elements.
+
+"null" is generated:
+
+    jp_printf(&jp, "[ %s ]", NULL);
+
+as needed with %s format.
+
+Note that comma (','), colon (':') space and tab are ignored in the
+format. This allows the format to more closely match the desired JSON
+output. If any of the characters , : space or tab are to be included
+in an in-line key, the may be escaped with %. Likewise % can be escaped
+with either % or \ (%% or \%). For example, the following key has
+embeded spaces:
+
+    jp_printf(&jp, "{key\\ with\\ spaces%s}", NULL);
+
+Note that this key does not end with : -- and the %s follows immediately.
+This is allowed, but not encouraged.
+
+Error codes:
+
+#define JPRINT_OK          0
+#define JPRINT_BUF_FULL    1 /* output buffer full */
+#define JPRINT_NEST_ERROR  2 /* nesting error */
+#define JPRINT_STACK_FULL  3 /* array/object nesting  */
+#define JPRINT_STACK_EMPTY 4 /* stack underflow error */
+#define JPRINT_OPEN        5 /* not all objects closed */
+#define JPRINT_FMT         6 /* format error */
+
+
+API:
+
+int jp_errorpos(jprint_t *jp);
+    return error position (call sequence number of jp_printf)
+
+const char *jp_errorstring(int err);
+    return error string for error code
+
+int jp_error(jprint_t *jp);
+    return error from jp
+
+void jp_open(jprint_t *jp, char *buffer, size_t buflen);
+    open json using buffer of length buflen
+
+int jp_close(jprint_t *jp);
+    close json, returns error
+
+int jp_printf(jprint_t *jp, const char *fmt, ...);
+    printf items into json, returns -1 or number of characters
+    added to buffer
+
+    %%           put % into inline key
+    %d           int
+    %l           int64_t
+    %k           key
+    %g           double
+    %b           boolean_t
+    %s           char*
+    {            begin object
+    }            end object
+    [            begin array
+    ]            end array
+    , : ' ' '\t' pretty format
+    \            put %,: space tab into inline key
+
