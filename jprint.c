@@ -8,27 +8,18 @@
 /* If standalone */
 #include "jprint.h"
 
-/* Here is one for the ages:
- *
- * Compile on Linux (Fedora 37):
- * jprint.c:226:43: error: SSE register argument with SSE disabled
- * 226 |                                         x = va_arg(ap, double);
- * cc1: all warnings being treated as errors
- *
- * So, we replace this with an argument fetch of long. BUILD_BUG_ON
- * is used to validate that sizeof (double) == sizeof (long)
- *
- * If the sizes are the same, the alignment should be aok, and we
- * type-pun through a pointer.
+/* Do not support %g format. Just %d and %l for integers. If set
  */
+#define NO_DOUBLE 0
 
-/* BUILD_BUG_ON(sizeof(someThing) != PAGE_SIZE);
+/* Use %g instead of %e for double format
  */
-#ifdef BUILD_BUG_ON
-#undef BUILD_BUG_ON
+#define USE_G 1
+
+#ifndef PRId64
+#define PRId64 "lld"
+#define PRIu64 "llu"
 #endif
-#define BUILD_BUG_ON(condition) ((void)sizeof(char[1 - 2*!!(condition)]))
-
 
 /* literal key length maximum
  */
@@ -53,6 +44,7 @@ const char *jp_errorstring(int err) {
 	case JPRINT_STACK_EMPTY: return "jprint stack empty";
 	case JPRINT_OPEN:        return "jprint open";
 	case JPRINT_FMT:         return "jprint format";
+	case JPRINT_NO_DOUBLE:   return "jprint no double support";
 	}
 	return "jprint: unknown error";
 }
@@ -73,6 +65,7 @@ void jp_open(jprint_t *jp, char *buffer, size_t buflen) {
 	jp->error = JPRINT_OK;
 	jp->ncall = 0;
 	jp->stackp = -1;
+	*buffer = '\0';
 }
 
 
@@ -102,7 +95,7 @@ static void jp_putc(jprint_t *jp, char c) {
 /* put string to json
  */
 static void jp_puts(jprint_t *jp, char *s) {
-	while (*s)
+	while (*s && (jp->error == JPRINT_OK))
 		jp_putc(jp, *s++);
 }
 
@@ -118,7 +111,7 @@ static void jp_putsq(jprint_t *jp, char *s) {
 		return;
 	}
 	jp_putc(jp, '\"');
-	while (*s != '\0') {
+	while (*s && (jp->error == JPRINT_OK)) {
                 c = (int)*s++;
                 /* formfeed, newline, return, tab, backspace
                  */
@@ -197,12 +190,16 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 	char key[KEYLEN + 1];
 	int k, i;
 	va_list ap;
-	int64_t n;
-	double x;
+	int n;
+	unsigned int u;
+	int64_t n64;
+	uint64_t u64;
 	boolean_t b;
 	char *s;
 	char *start = jp->bufp;
 
+	if (jp->error != JPRINT_OK)
+		return -1;
 	++jp->ncall;
 	va_start(ap, fmt);
 	key[k = 0] = '\0';
@@ -220,13 +217,52 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 				break;
 			case 'd': /* next parameter is int */
 				n = va_arg(ap, int);
-				goto int_cmn;
-			case 'l': /* next parameter is int64_t */
-				n = va_arg(ap, int64_t);
-int_cmn:			if (jp_key(jp, key) == JPRINT_OK) {
-					i = snprintf(
-					    jp->tmpbuf, sizeof (jp->tmpbuf),
-				            "%lld", (long long int)n);
+				i = snprintf(
+				    jp->tmpbuf, sizeof (jp->tmpbuf),
+				    "%d", n);
+				if (jp_key(jp, key) == JPRINT_OK) {
+					if ((i >= sizeof (jp->tmpbuf)) ||
+					    (i < 0))
+						jp_puts(jp, (char *)"####");
+					else
+						jp_puts(jp, jp->tmpbuf);
+				}
+				key[k = 0] = '\0';
+				break;
+			case 'u': /* next parameter is unsigned int */
+				u = va_arg(ap, unsigned int);
+				i = snprintf(
+				    jp->tmpbuf, sizeof (jp->tmpbuf),
+				    "%u", u);
+				if (jp_key(jp, key) == JPRINT_OK) {
+					if ((i >= sizeof (jp->tmpbuf)) ||
+					    (i < 0))
+						jp_puts(jp, (char *)"####");
+					else
+						jp_puts(jp, jp->tmpbuf);
+				}
+				key[k = 0] = '\0';
+				break;
+			case 'U': /* next parameter is uint64_t */
+				u64 = va_arg(ap, uint64_t);
+				i = snprintf(
+				    jp->tmpbuf, sizeof (jp->tmpbuf),
+				    "%" PRIu64, u64);
+				if (jp_key(jp, key) == JPRINT_OK) {
+					if ((i >= sizeof (jp->tmpbuf)) ||
+					    (i < 0))
+						jp_puts(jp, (char *)"####");
+					else
+						jp_puts(jp, jp->tmpbuf);
+				}
+				key[k = 0] = '\0';
+				break;
+			case 'D': /* next parameter is int64_t */
+				n64 = va_arg(ap, int64_t);
+				i = snprintf(
+				    jp->tmpbuf, sizeof (jp->tmpbuf),
+				    "%" PRId64, n64);
+				if (jp_key(jp, key) == JPRINT_OK) {
 					if ((i >= sizeof (jp->tmpbuf)) ||
 					    (i < 0))
 						jp_puts(jp, (char *)"####");
@@ -236,22 +272,33 @@ int_cmn:			if (jp_key(jp, key) == JPRINT_OK) {
 				key[k = 0] = '\0';
 				break;
 			case 's': /* next parameter is string */
-				if (jp_key(jp, key) == JPRINT_OK) {
-					s = va_arg(ap, char *);
+				s = va_arg(ap, char *);
+				if (jp_key(jp, key) == JPRINT_OK)
 					jp_putsq(jp, s);
-				}
 				key[k = 0] = '\0';
 				break;
 			case 'g': /* next parameter is double */
+#if NO_DOUBLE
+				jp->error = JPRINT_NO_DOUBLE;
+#else
+				double x;
+				x = va_arg(ap, double);
 				if (jp_key(jp, key) == JPRINT_OK) {
-BUILD_BUG_ON(sizeof(double) != sizeof(long));
-					long t;
-					volatile double *p = (double *)&t;
-					t = va_arg(ap, long);
-					x = *p;
+#if USE_G
+					/* if we have functional %g format,
+					 * use it.
+					 */
 					i = snprintf(
 					    jp->tmpbuf, sizeof (jp->tmpbuf),
 				            "%g", x);
+#else
+					/* double has 15 places:
+					 * 1.<14 digits>e-308
+					 */
+					i = snprintf(
+					    jp->tmpbuf, sizeof (jp->tmpbuf),
+				            "%21.14e", x);
+#endif
 					if ((i >= sizeof (jp->tmpbuf)) ||
 					    (i < 0))
 						jp_puts(jp, (char *)"####");
@@ -259,6 +306,7 @@ BUILD_BUG_ON(sizeof(double) != sizeof(long));
 						jp_puts(jp, jp->tmpbuf);
 				}
 				key[k = 0] = '\0';
+#endif
 				break;
 			case 'b': /* next parameter is boolean */
 				if (jp_key(jp, key) == JPRINT_OK) {
@@ -332,11 +380,16 @@ BUILD_BUG_ON(sizeof(double) != sizeof(long));
 			/* allow inclusion of ,: space tab to key */
 			if (fmt[1] == '\0')
 				jp->error = JPRINT_FMT;
-			++fmt;
-			/* and drop through */
-			goto deflt;
+			else {
+				++fmt;
+				if (k < KEYLEN) {
+					key[k++] = *fmt;
+					key[k] = '\0';
+				} else
+					jp->error = JPRINT_FMT;
+			}
+			break;
 		default:
-deflt:
 			if (k < KEYLEN) {
 				key[k++] = *fmt;
 				key[k] = '\0';

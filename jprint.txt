@@ -78,6 +78,71 @@ embeded spaces:
 Note that this key does not end with : -- and the %s follows immediately.
 This is allowed, but not encouraged.
 
+jprint can be compiled with NO_DOUBLE defined to 1 (in jprint.c). This
+removes %g format and double support. Note that ZFS uses this because
+of GPL licensing issues.
+
+Format codes supported are %d (int) %u (unsigned), %D (int64_t) and %U
+(uint64_t) for numeric. %g is included for double if enabled. If %g
+is used and is not enabled, error code JPRINT_NO_DOUBLE is returned.
+
+%b is used for boolean (boolean_t in ZFS). This generates true or false
+in the output document.
+
+%s is used for strings. UTF 8 is used. 0x00 through 0x1f and 0x7f are
+escaped with the \Uhhhh notation, or the \r \n \t \b \f sequences
+defined in the JSON specification. \ and the other "special" JSON
+characters are suitably escaped. All other UTF 8 is copied through.
+
+If a NULL is passed as a %s parameter, null is produced in the document.
+
+jprint takes care of ensuring the JSON document is properly structured,
+has commas, colons in the correct positions, Strings are quoted and
+escaped as needed.
+
+jp_error can be used after jp_printf to return any error code. JPRINT_OK
+is returned if everything is in order. JPRINT_BUF_FULL is returned if
+the buffer overflowed. This can be used to increase the buffer and
+regenerate the document.
+
+As shown in the example the %k format can be used to introduce a dynamic
+key. Only strings are supported as keys -- other keys will have to be
+converted to strings before use by the using application. This technique
+is not illustrated.
+
+The error codes returned can be converted to printable strings with the
+jp_errorstring function. As well, each of the jp_printf calls is tracked
+by incrementing a call number. This is intended to isolate the jprint
+call that generates an error. The call number can be retrieved with the
+jp_errorpos function. In general, it is expected that JSON documents
+will be generated in pieces (especially arrays). The array will be
+opened, and then appended to by subsequent calls to jp_printf. The
+array will be close via jp_print("]") (for example). But an error
+may have occured in a prior call. This information is conveyed via
+jp_errorpos, and is intended to allow the isolation of the error.
+Alternately, jp_error could be invoked after each jp_printf.
+
+jp_printf returns -1 on errors, or the number of characters that
+this invocation has added to the buffer being built.
+
+If "pretty-printing" is desired, run the output through jq. An example:
+
+{"key":"Hello world!","count":1,"size":4096}
+
+is the document produced by jprint. Note the lack of unnecessary delimiters,
+include lack of final newline. It would be possible (in most cases) to
+remove the " quoting around the keys -- I think most JSON decoders would
+find that acceptable. We put them in. Running this document through jq
+provides a pretty-printed canonical form:
+
+echo -n '{"key":"Hello world!","count":1,"size":4096}' | jq
+{
+  "key": "Hello world!",
+  "count": 2,
+  "size": 4096
+}
+
+
 Error codes:
 
 #define JPRINT_OK          0
@@ -87,6 +152,7 @@ Error codes:
 #define JPRINT_STACK_EMPTY 4 /* stack underflow error */
 #define JPRINT_OPEN        5 /* not all objects closed */
 #define JPRINT_FMT         6 /* format error */
+#define JPRINT_NO_DOUBLE   7 /* %g not supported */
 
 
 API:
@@ -110,17 +176,19 @@ int jp_printf(jprint_t *jp, const char *fmt, ...);
     printf items into json, returns -1 or number of characters
     added to buffer
 
-    %%           put % into inline key
-    %d           int
-    %l           int64_t
-    %k           key
-    %g           double
-    %b           boolean_t
-    %s           char*
-    {            begin object
-    }            end object
-    [            begin array
-    ]            end array
-    , : ' ' '\t' pretty format
-    \            put %,: space tab into inline key
+        %%           put % into inline key
+        %d           int
+        %u		 unsigned int
+        %D           int64_t
+        %U		 uint64_t
+        %k           key
+        %g           double (not supported in kernel)
+        %b           boolean_t
+        %s           char*
+        {            begin object
+        }            end object
+        [            begin array
+        ]            end array
+        , : ' ' '\t' pretty format
+        \            put %,: space tab into inline key
 

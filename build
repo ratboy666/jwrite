@@ -2,5 +2,5 @@
 #
 # Build both jprint and jwrite. Note that jprint supercedes jwrite
 
-gcc -o jprint test.c jprint.c -lm
+gcc -g -o jprint test.c jprint.c -lm
 gcc -o jwrite main.c jwrite.c -lm

@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <inttypes.h>
 
 /* int64_t used because we may want to output pointers as integer.
  * Careful when reading the values... json itself does not define
@@ -55,6 +56,7 @@ typedef struct jprint {
 #define JPRINT_STACK_EMPTY 4 /* stack underflow error */
 #define JPRINT_OPEN        5 /* not all objects closed */
 #define JPRINT_FMT         6 /* format error */
+#define JPRINT_NO_DOUBLE   7 /* %g support not included */
 
 
 const char *jp_errorstring(int err);
