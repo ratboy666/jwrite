@@ -1,4 +1,5 @@
-/* jprint.h
+/*
+ * jprint.h
  */
 
 /* If in ZFS <sys/zfs_context.h> provides what is needed */
@@ -15,13 +16,13 @@
 #include <string.h>
 #include <inttypes.h>
 
-/* int64_t used because we may want to output pointers as integer.
+/*
+ * int64_t used because we may want to output pointers as integer.
  * Careful when reading the values... json itself does not define
  * numeric ranges.
  */
 
-/* maximum stack nesting
- */
+/* maximum stack nesting */
 #define JP_MAX_STACK 32
 
 enum jp_type {
@@ -46,9 +47,7 @@ typedef struct jprint {
     int stackp;
 } jprint_t;
 
-
-/* error return codes
- */
+/* error return codes */
 #define JPRINT_OK          0
 #define JPRINT_BUF_FULL    1 /* output buffer full */
 #define JPRINT_NEST_ERROR  2 /* nesting error */
@@ -57,7 +56,6 @@ typedef struct jprint {
 #define JPRINT_OPEN        5 /* not all objects closed */
 #define JPRINT_FMT         6 /* format error */
 #define JPRINT_NO_DOUBLE   7 /* %g support not included */
-
 
 const char *jp_errorstring(int err);
 int jp_error(jprint_t *jp);

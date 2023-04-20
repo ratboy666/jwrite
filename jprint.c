@@ -1,4 +1,5 @@
-/* jprint.c
+/*
+ * jprint.c
  */
 
 /* If in ZFS */
@@ -25,17 +26,18 @@
  */
 #define KEYLEN 255
 
-
 /* return error position (call number of jp_printf)
  */
-int jp_errorpos(jprint_t *jp) {
+int
+jp_errorpos(jprint_t *jp)
+{
 	return (jp->ncall);
 }
 
-
-/* return string for error code
- */
-const char *jp_errorstring(int err) {
+/* return string for error code */
+const char *
+jp_errorstring(int err)
+{
 	switch (err) {
 	case JPRINT_OK:          return "jprint ok";
 	case JPRINT_BUF_FULL:    return "jprint buffer full";
@@ -49,17 +51,17 @@ const char *jp_errorstring(int err) {
 	return "jprint: unknown error";
 }
 
-
-/* return error from jprint_t
- */
-int jp_error(jprint_t *jp) {
+/* return error from jprint_t */
+int
+jp_error(jprint_t *jp)
+{
 	return (jp->error);
 }
 
-
-/* open json using buffer of length buflen
- */
-void jp_open(jprint_t *jp, char *buffer, size_t buflen) {
+/* open json using buffer of length buflen */
+void
+jp_open(jprint_t *jp, char *buffer, size_t buflen)
+{
 	jp->buffer = jp->bufp = buffer;
 	jp->buflen = buflen;
 	jp->error = JPRINT_OK;
@@ -68,19 +70,22 @@ void jp_open(jprint_t *jp, char *buffer, size_t buflen) {
 	*buffer = '\0';
 }
 
-
-/* close json
- */
-int jp_close(jprint_t *jp) {
+/* close json */
+int
+jp_close(jprint_t *jp)
+{
+	if (jp->error != JPRINT_OK)
+		return (jp->error);
 	if (jp->stackp != -1)
 		jp->error = JPRINT_OPEN;
 	return (jp->error);
 }
 
 
-/* put character to json
- */
-static void jp_putc(jprint_t *jp, char c) {
+/* put character to json */
+static void
+jp_putc(jprint_t *jp, char c)
+{
 	if (jp->error == JPRINT_OK) {
 		if ((jp->bufp - jp->buffer + 1) >= jp->buflen)
 			jp->error = JPRINT_BUF_FULL;
@@ -92,17 +97,19 @@ static void jp_putc(jprint_t *jp, char c) {
 }
 
 
-/* put string to json
- */
-static void jp_puts(jprint_t *jp, char *s) {
+/* put string to json */
+static void
+jp_puts(jprint_t *jp, char *s)
+{
 	while (*s && (jp->error == JPRINT_OK))
 		jp_putc(jp, *s++);
 }
 
 
-/* put quoted string to json
- */
-static void jp_putsq(jprint_t *jp, char *s) {
+/* put quoted string to json */
+static void
+jp_putsq(jprint_t *jp, char *s)
+{
 	static const char *hex = "0123456789ABCDEF";
 	int c;
 
@@ -113,8 +120,7 @@ static void jp_putsq(jprint_t *jp, char *s) {
 	jp_putc(jp, '\"');
 	while (*s && (jp->error == JPRINT_OK)) {
                 c = (int)*s++;
-                /* formfeed, newline, return, tab, backspace
-                 */
+                /* formfeed, newline, return, tab, backspace */
                 if (c == 12)
                         jp_puts(jp, (char *)"\\f");
                 else if (c == 10)
@@ -125,22 +131,23 @@ static void jp_putsq(jprint_t *jp, char *s) {
                         jp_puts(jp, (char *)"\\t");
                 else if (c == 8)
                         jp_puts(jp, (char *)"\\b");
-               /* all characters from 0x00 to 0x1f, and 0x7f are
+               /*
+		* all characters from 0x00 to 0x1f, and 0x7f are
                 * escaped as: \u00xx
                 */
                 else if (((0 <= c) && (c <= 0x1f)) || (c == 0x7f)) {
                         jp_puts(jp, (char *)"\\u00");
                         jp_putc(jp, hex[(c >> 4) & 0x0f]);
                         jp_putc(jp, hex[c & 0x0f]);
-                /* " \ /
-                 */
+                /* " \ / */
                 } else if (c == '"')
                         jp_puts(jp, (char *)"\\\"");
                 else if (c == '\\')
                         jp_puts(jp, (char *)"\\\\");
                 else if (c == '/')
                         jp_puts(jp, (char *)"\\/");
-                /* all other printable characters ' ' to '~', and
+                /*
+		 * all other printable characters ' ' to '~', and
                  * any utf-8 sequences (high bit set):
                  * 1xxxxxxx 10xxxxxx ...
                  * is a utf-8 sequence (10xxxxxx may occur 1 to 3 times).
@@ -154,23 +161,21 @@ static void jp_putsq(jprint_t *jp, char *s) {
 }
 
 
-/* put out key if object open. error if nothing open
- */
-static int jp_key(jprint_t *jp, char *key) {
+/* put out key if object open. error if nothing open */
+static int
+jp_key(jprint_t *jp, char *key)
+{
 	if (jp->error != JPRINT_OK)
 		goto err;
-	/* at top level, no frame exists yet, no error
-	 */
+	/* at top level, no frame exists yet, no error */
 	if (jp->stackp == -1)
 		goto err;
-	/* stackp has been "popped" too many times
-	 */
+	/* stackp has been "popped" too many times */
 	if (jp->stackp < -1) {
 		jp->error = JPRINT_STACK_EMPTY;
 		goto err;
 	}
-	/* put comma separator in (both object and array)
-	 */
+	/* put comma separator in (both object and array) */
 	if (++jp->stack[jp->stackp].nelem > 1)
 		jp_putc(jp, ',');
 	/* if its in an object, put out the key and separator
@@ -184,9 +189,10 @@ err:
 }
 
 
-/* printf to json
- */
-int jp_printf(jprint_t *jp, const char *fmt, ...) {
+/* printf to json */
+int
+jp_printf(jprint_t *jp, const char *fmt, ...)
+{
 	char key[KEYLEN + 1];
 	int k, i;
 	va_list ap;
@@ -199,7 +205,7 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 	char *start = jp->bufp;
 
 	if (jp->error != JPRINT_OK)
-		return -1;
+		return (-1);
 	++jp->ncall;
 	va_start(ap, fmt);
 	key[k = 0] = '\0';
@@ -209,6 +215,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 			++fmt;
 			switch (*fmt) {
 			case 'k': /* next parameter is key */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				s = va_arg(ap, char *);
 				if (strlen(s) <= KEYLEN)
 					strcpy(key, s);
@@ -216,6 +226,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 					jp->error = JPRINT_FMT;
 				break;
 			case 'd': /* next parameter is int */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				n = va_arg(ap, int);
 				i = snprintf(
 				    jp->tmpbuf, sizeof (jp->tmpbuf),
@@ -230,6 +244,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 				key[k = 0] = '\0';
 				break;
 			case 'u': /* next parameter is unsigned int */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				u = va_arg(ap, unsigned int);
 				i = snprintf(
 				    jp->tmpbuf, sizeof (jp->tmpbuf),
@@ -244,6 +262,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 				key[k = 0] = '\0';
 				break;
 			case 'U': /* next parameter is uint64_t */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				u64 = va_arg(ap, uint64_t);
 				i = snprintf(
 				    jp->tmpbuf, sizeof (jp->tmpbuf),
@@ -258,6 +280,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 				key[k = 0] = '\0';
 				break;
 			case 'D': /* next parameter is int64_t */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				n64 = va_arg(ap, int64_t);
 				i = snprintf(
 				    jp->tmpbuf, sizeof (jp->tmpbuf),
@@ -272,6 +298,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 				key[k = 0] = '\0';
 				break;
 			case 's': /* next parameter is string */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				s = va_arg(ap, char *);
 				if (jp_key(jp, key) == JPRINT_OK)
 					jp_putsq(jp, s);
@@ -281,18 +311,24 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 #if NO_DOUBLE
 				jp->error = JPRINT_NO_DOUBLE;
 #else
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				double x;
 				x = va_arg(ap, double);
 				if (jp_key(jp, key) == JPRINT_OK) {
 #if USE_G
-					/* if we have functional %g format,
+					/*
+					 * if we have functional %g format,
 					 * use it.
 					 */
 					i = snprintf(
 					    jp->tmpbuf, sizeof (jp->tmpbuf),
 				            "%g", x);
 #else
-					/* double has 15 places:
+					/*
+					 * double has 15 places:
 					 * 1.<14 digits>e-308
 					 */
 					i = snprintf(
@@ -309,6 +345,10 @@ int jp_printf(jprint_t *jp, const char *fmt, ...) {
 #endif
 				break;
 			case 'b': /* next parameter is boolean */
+				if (jp->stackp < 0) {
+					jp->error = JPRINT_STACK_EMPTY;
+					break;
+				}
 				if (jp_key(jp, key) == JPRINT_OK) {
 					b = (boolean_t)va_arg(ap, int);
 					s = b ? (char *)"true" :
