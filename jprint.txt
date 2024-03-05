@@ -1,7 +1,6 @@
 jprint - Generate JSON from C
 
-Replaces jWrite completely. This was written by Fred Weigel,
-and is open for any use.
+Written by by Fred Weigel, and is open for any use.
 
 https://jsonlint.com/
 
@@ -16,15 +15,9 @@ production. It does not do any allocations on its own, relying on a
 passed-in structure to track nesting. We assume that the caller is able
 to reallocate in case of insufficient buffer memory.
 
-jprint replaces jWrite; the licensing for jWrite was not compatible
-with our needs. jprint *could* generate the appropriate jWrite calls,
-and, likewise jWrite *could* generate jprint sequences as needed.
-
-However, jWrite is now considered obsolete, and not to be used.
-
 Note that jprint DOES NOT PRETTY-PRINT. Use jq (or something like that)
-to do that function (if needed). See test.c for examples of use. Unlike
-jWrite, jprint only has jp_printf to generate output. Typically, only
+to do that function (if needed). See test.c for examples of use.
+jprint only has jp_printf to generate output. Typically, only
 three calls are needed: jp_open to initialize, jp_printf to generate
 the document and jp_close to validate and "close". jp_close itself is
 only an "error check".
@@ -32,7 +25,6 @@ only an "error check".
 The idea of three calls is that jp_printf may be called many times
 to produce the desired document. This is particulary useful if an
 array is being generated.
-
 
 Type jprint_t is used to store data for jprint. This is passed to
 jprint as a pointer to jprint_t, and contains nesting, buffer and
@@ -178,13 +170,13 @@ int jp_printf(jprint_t *jp, const char *fmt, ...);
 
         %%           put % into inline key
         %d           int
-        %u		 unsigned int
+        %u	     unsigned int
         %D           int64_t
-        %U		 uint64_t
+        %U	     uint64_t
         %k           key
         %g           double (not supported in kernel)
         %b           boolean_t
-        %s           char*
+        %s           char *
         {            begin object
         }            end object
         [            begin array
