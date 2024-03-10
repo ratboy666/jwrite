@@ -35,13 +35,9 @@ which results in
 
 This is a library to allow simple generation of JSON.
 
-snprintf() is used to convert integer (int64\_t) and double to
-string. This has been reviewed on Linux, but not on FreeBSD
-yet.
+snprintf() is used to convert integer (int64\_t) and double to string. This has been reviewed on Linux, but not on FreeBSD yet.
 
-Note that there is really no special handling for nan, or
-infinity. These cases are produced in the test, but handling
-may vary.
+Note that there is really no special handling for nan, or infinity. These cases are produced in the test, but handling may vary.
 
 gcc -o jprint test.c jprint.c -lm
 

@@ -74,10 +74,12 @@ jp_open(jprint_t *jp, char *buffer, size_t buflen)
 int
 jp_close(jprint_t *jp)
 {
-	if (jp->error != JPRINT_OK)
+	if (jp->error != JPRINT_OK) {
 		return (jp->error);
-	if (jp->stackp != -1)
+	}
+	if (jp->stackp != -1) {
 		jp->error = JPRINT_OPEN;
+	}
 	return (jp->error);
 }
 
@@ -87,9 +89,9 @@ static void
 jp_putc(jprint_t *jp, char c)
 {
 	if (jp->error == JPRINT_OK) {
-		if ((jp->bufp - jp->buffer + 1) >= jp->buflen)
+		if ((jp->bufp - jp->buffer + 1) >= jp->buflen) {
 			jp->error = JPRINT_BUF_FULL;
-		else {
+		} else {
 			*jp->bufp++ = c;
 			*jp->bufp = '\0';
 		}
@@ -101,8 +103,9 @@ jp_putc(jprint_t *jp, char c)
 static void
 jp_puts(jprint_t *jp, char *s)
 {
-	while (*s && (jp->error == JPRINT_OK))
+	while (*s && (jp->error == JPRINT_OK)) {
 		jp_putc(jp, *s++);
+	}
 }
 
 
@@ -121,30 +124,30 @@ jp_putsq(jprint_t *jp, char *s)
 	while (*s && (jp->error == JPRINT_OK)) {
                 c = (int)*s++;
                 /* formfeed, newline, return, tab, backspace */
-                if (c == 12)
+                if (c == 12) {
                         jp_puts(jp, (char *)"\\f");
-                else if (c == 10)
+                } else if (c == 10) {
                         jp_puts(jp, (char *)"\\n");
-                else if (c == 13)
+                } else if (c == 13) {
                         jp_puts(jp, (char *)"\\r");
-                else if (c == 9)
+                } else if (c == 9) {
                         jp_puts(jp, (char *)"\\t");
-                else if (c == 8)
+                } else if (c == 8) {
                         jp_puts(jp, (char *)"\\b");
                /*
 		* all characters from 0x00 to 0x1f, and 0x7f are
                 * escaped as: \u00xx
                 */
-                else if (((0 <= c) && (c <= 0x1f)) || (c == 0x7f)) {
+                } else if (((0 <= c) && (c <= 0x1f)) || (c == 0x7f)) {
                         jp_puts(jp, (char *)"\\u00");
                         jp_putc(jp, hex[(c >> 4) & 0x0f]);
                         jp_putc(jp, hex[c & 0x0f]);
                 /* " \ / */
-                } else if (c == '"')
+                } else if (c == '"') {
                         jp_puts(jp, (char *)"\\\"");
-                else if (c == '\\')
+                } else if (c == '\\') {
                         jp_puts(jp, (char *)"\\\\");
-                else if (c == '/')
+                } else if (c == '/') {
                         jp_puts(jp, (char *)"\\/");
                 /*
 		 * all other printable characters ' ' to '~', and
@@ -154,8 +157,9 @@ jp_putsq(jprint_t *jp, char *s)
                  * Note that this is simply distinguished here as high
                  * bit set.
                  */
-                else
+                } else {
 			jp_putc(jp, (char)c);
+		}
         }
 	jp_putc(jp, '\"');
 }
@@ -165,19 +169,22 @@ jp_putsq(jprint_t *jp, char *s)
 static int
 jp_key(jprint_t *jp, char *key)
 {
-	if (jp->error != JPRINT_OK)
+	if (jp->error != JPRINT_OK) {
 		goto err;
+	}
 	/* at top level, no frame exists yet, no error */
-	if (jp->stackp == -1)
+	if (jp->stackp == -1) {
 		goto err;
+	}
 	/* stackp has been "popped" too many times */
 	if (jp->stackp < -1) {
 		jp->error = JPRINT_STACK_EMPTY;
 		goto err;
 	}
 	/* put comma separator in (both object and array) */
-	if (++jp->stack[jp->stackp].nelem > 1)
+	if (++jp->stack[jp->stackp].nelem > 1) {
 		jp_putc(jp, ',');
+	}
 	/* if its in an object, put out the key and separator
 	 */
 	if (jp->stack[jp->stackp].type == JP_OBJECT) {
@@ -204,8 +211,9 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 	char *s;
 	char *start = jp->bufp;
 
-	if (jp->error != JPRINT_OK)
+	if (jp->error != JPRINT_OK) {
 		return (-1);
+	}
 	++jp->ncall;
 	va_start(ap, fmt);
 	key[k = 0] = '\0';
@@ -220,10 +228,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 					break;
 				}
 				s = va_arg(ap, char *);
-				if (strlen(s) <= KEYLEN)
+				if (strlen(s) <= KEYLEN) {
 					strcpy(key, s);
-				else
+				} else {
 					jp->error = JPRINT_FMT;
+				}
 				break;
 			case 'd': /* next parameter is int */
 				if (jp->stackp < 0) {
@@ -236,10 +245,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				    "%d", n);
 				if (jp_key(jp, key) == JPRINT_OK) {
 					if ((i >= sizeof (jp->tmpbuf)) ||
-					    (i < 0))
+					    (i < 0)) {
 						jp_puts(jp, (char *)"####");
-					else
+					} else {
 						jp_puts(jp, jp->tmpbuf);
+					}
 				}
 				key[k = 0] = '\0';
 				break;
@@ -254,10 +264,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				    "%u", u);
 				if (jp_key(jp, key) == JPRINT_OK) {
 					if ((i >= sizeof (jp->tmpbuf)) ||
-					    (i < 0))
+					    (i < 0)) {
 						jp_puts(jp, (char *)"####");
-					else
+					} else {
 						jp_puts(jp, jp->tmpbuf);
+					}
 				}
 				key[k = 0] = '\0';
 				break;
@@ -272,10 +283,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				    "%" PRIu64, u64);
 				if (jp_key(jp, key) == JPRINT_OK) {
 					if ((i >= sizeof (jp->tmpbuf)) ||
-					    (i < 0))
+					    (i < 0)) {
 						jp_puts(jp, (char *)"####");
-					else
+					} else {
 						jp_puts(jp, jp->tmpbuf);
+					}
 				}
 				key[k = 0] = '\0';
 				break;
@@ -290,10 +302,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				    "%" PRId64, n64);
 				if (jp_key(jp, key) == JPRINT_OK) {
 					if ((i >= sizeof (jp->tmpbuf)) ||
-					    (i < 0))
+					    (i < 0)) {
 						jp_puts(jp, (char *)"####");
-					else
+					} else {
 						jp_puts(jp, jp->tmpbuf);
+					}
 				}
 				key[k = 0] = '\0';
 				break;
@@ -336,10 +349,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				            "%21.14e", x);
 #endif
 					if ((i >= sizeof (jp->tmpbuf)) ||
-					    (i < 0))
+					    (i < 0)) {
 						jp_puts(jp, (char *)"####");
-					else
+					} else {
 						jp_puts(jp, jp->tmpbuf);
+					}
 				}
 				key[k = 0] = '\0';
 #endif
@@ -361,17 +375,18 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 				if (k < KEYLEN) {
 					key[k++] = '%';
 					key[k] = '\0';
-				} else
+				} else {
 					jp->error = JPRINT_FMT;
+				}
 				break;
 			default:
 				jp->error = JPRINT_FMT;
 			}
 			break;
 		case '{': /* open object */
-			if (jp->stackp >= (JP_MAX_STACK - 1))
+			if (jp->stackp >= (JP_MAX_STACK - 1)) {
 				jp->error = JPRINT_STACK_FULL;
-			else {
+			} else {
 				(void) jp_key(jp, key);
 				++jp->stackp;
 				jp->stack[jp->stackp].type = JP_OBJECT;
@@ -380,19 +395,19 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 			}
 			break;
 		case '}': /* close object */
-			if (jp->stackp < 0)
+			if (jp->stackp < 0) {
 				jp->error = JPRINT_STACK_EMPTY;
-			else if (jp->stack[jp->stackp].type != JP_OBJECT)
+			} else if (jp->stack[jp->stackp].type != JP_OBJECT) {
 				jp->error = JPRINT_NEST_ERROR;
-			else {
+			} else {
 				--jp->stackp;
 				jp_putc(jp, '}');
 			}
 			break;
 		case '[': /* open array */
-			if (jp->stackp >= (JP_MAX_STACK - 1))
+			if (jp->stackp >= (JP_MAX_STACK - 1)) {
 				jp->error = JPRINT_STACK_FULL;
-			else {
+			} else {
 				(void) jp_key(jp, key);
 				++jp->stackp;
 				jp->stack[jp->stackp].type = JP_ARRAY;
@@ -401,11 +416,11 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 			}
 			break;
 		case ']': /* close array */
-			if (jp->stackp < 0)
+			if (jp->stackp < 0) {
 				jp->error = JPRINT_STACK_EMPTY;
-			else if (jp->stack[jp->stackp].type != JP_ARRAY)
+			} else if (jp->stack[jp->stackp].type != JP_ARRAY) {
 				jp->error = JPRINT_NEST_ERROR;
-			else {
+			} else {
 				--jp->stackp;
 				jp_putc(jp, ']');
 			}
@@ -418,30 +433,33 @@ jp_printf(jprint_t *jp, const char *fmt, ...)
 			break;
 		case '\\':
 			/* allow inclusion of ,: space tab to key */
-			if (fmt[1] == '\0')
+			if (fmt[1] == '\0') {
 				jp->error = JPRINT_FMT;
-			else {
+			} else {
 				++fmt;
 				if (k < KEYLEN) {
 					key[k++] = *fmt;
 					key[k] = '\0';
-				} else
+				} else {
 					jp->error = JPRINT_FMT;
+				}
 			}
 			break;
 		default:
 			if (k < KEYLEN) {
 				key[k++] = *fmt;
 				key[k] = '\0';
-			} else
+			} else {
 				jp->error = JPRINT_FMT;
+			}
 			break;
 		}
 		++fmt;
 	}
 	va_end(ap);
-	if (jp->error != JPRINT_OK)
+	if (jp->error != JPRINT_OK) {
 		return (-1);
+	}
 	
 	return (int)(jp->bufp - start);
 }
